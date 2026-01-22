@@ -1,4 +1,10 @@
-def get_task_handler(self) -> None:
+# Task Handlers 
+
+def get_all_tasks_handler(self) -> None:
+    """
+    Responds with all the user-allowed information about every task stored in the
+    database.
+    """
     ...
 
 
@@ -11,20 +17,24 @@ def post_task_handler(self) -> None:
 
 
 def patch_task_handler(self) -> None:
+    """
+    Allows the user to update the specified task. task updates are generally about
+    editing the name of the label or changing its color.
+    """
     ...
 
 
 def get_task_handler(self) -> None:
-    ...
-
-
-def get_all_tasks_handler(self) -> None:
     """
-    Responds with all the user-allowed information about every task stored in the
+    Responds with all the user-allowed information about that task stored in the
     database.
     """
     ...
 
+
+
+
+# Task Label Handlers
 
 def get_task_label_handler(self) -> None:
     """
@@ -55,11 +65,6 @@ def patch_task_label_handler(self) -> None:
     editing the name of the label or changing its color.
     """
     ...
-
-
-def get_task_label_handler(self) -> None:
-    ...
-
 
 def get_all_task_labels_handler(self) -> None:
     ...
