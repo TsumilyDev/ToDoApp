@@ -71,6 +71,7 @@ routes = {
         "/task": "get_task_handler",
         "/task-label": "get_task_label_handler",
         "/account": "get_account_handler",
+        },
     "POST": {
         "/task": "post_task_handler",
         "/task-label": "post_task_label_handler",
@@ -85,7 +86,6 @@ routes = {
         "/task": "delete_task_handler",
         "/task-label": "delete_task_label_handler",
         "/account": "delete_account_handler",
-    },
     },
 }
 
