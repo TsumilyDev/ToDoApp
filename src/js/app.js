@@ -1,4 +1,14 @@
 // ========================================
+// MOCK DATA
+// ========================================
+
+const MOCK_PROJECTS = [
+    { id: 1, name: 'Website Redesign', description: 'Overhaul company website with new branding', status: 'active' },
+    { id: 2, name: 'Mobile App Launch', description: 'Ship iOS and Android apps to production', status: 'active' },
+    { id: 3, name: 'API Documentation', description: 'Complete API docs for external developers', status: 'active' }
+];
+
+// ========================================
 // ROUTER
 // ========================================
 
@@ -24,7 +34,17 @@ class Router {
         const matched = this.matchRoute(hash);
 
         if (matched) {
-            view.innerHTML = matched.handler(matched.params);
+            // Clear view
+            view.innerHTML = '';
+            
+            // Render view (may return string or DOM element)
+            const content = matched.handler(matched.params);
+            
+            if (typeof content === 'string') {
+                view.innerHTML = content;
+            } else {
+                view.appendChild(content);
+            }
         } else {
             // Fallback to projects
             window.location.hash = '#/projects';
@@ -65,17 +85,56 @@ class Router {
 }
 
 // ========================================
-// VIEWS (Placeholders)
+// COMPONENTS
+// ========================================
+
+function ProjectCard(project) {
+    const card = document.createElement('div');
+    card.className = 'project-card';
+    
+    const name = document.createElement('h3');
+    name.textContent = project.name;
+    
+    const description = document.createElement('p');
+    description.textContent = project.description;
+    
+    card.appendChild(name);
+    card.appendChild(description);
+    
+    // Make card clickable
+    card.addEventListener('click', () => {
+        window.location.hash = `#/projects/${project.id}`;
+    });
+    
+    return card;
+}
+
+// ========================================
+// VIEWS
 // ========================================
 
 const views = {
     projects: () => {
-        return `
-            <div class="view-projects">
-                <h1>Projects</h1>
-                <p>Project list will go here</p>
-            </div>
-        `;
+        const container = document.createElement('div');
+        container.className = 'view-projects';
+        
+        const heading = document.createElement('h1');
+        heading.textContent = 'Projects';
+        container.appendChild(heading);
+        
+        // Filter active projects only
+        const activeProjects = MOCK_PROJECTS.filter(p => p.status === 'active');
+        
+        const projectList = document.createElement('div');
+        projectList.className = 'project-list';
+        
+        activeProjects.forEach(project => {
+            projectList.appendChild(ProjectCard(project));
+        });
+        
+        container.appendChild(projectList);
+        
+        return container;
     },
 
     projectDetail: (params) => {
