@@ -85,35 +85,8 @@ routes = {
     "DELETE": {
         "/task": "delete_task_handler",
         "/task-label": "delete_task_label_handler",
-        "/account": "delete_account_handler",
+        "/account": "delete_account_handler"
     },
-}
-
-files = {
-    # HTML
-    "/about": {
-        "path": ".../.../public/html/about.html",
-        "type": "text/html",
-        "bytes": False,
-    },
-    "/apartments": {
-        "path": ".../.../public/html/apartments.html",
-        "type": "text/html",
-        "bytes": False,
-    },
-    "/home": {
-        "path": ".../.../public/html/home.html",
-        "type": "text/html",
-        "bytes": False,
-    },
-    "/signup": {
-        "path": ".../.../public/html/signup.html",
-        "type": "text/html",
-        "bytes": False,
-    },
-    # CSS
-    # JS
-    # Media
 }
 
 

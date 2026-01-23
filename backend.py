@@ -1,7 +1,7 @@
 from os import environ
 from typing import Any
 from http.server import HTTPServer
-from backend.RequestHandler import request_handler
+from backend.router.RequestHandler import request_handler
 
 def get_env(key: str) -> Any:
     try:
