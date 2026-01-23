@@ -8,6 +8,42 @@ const MOCK_PROJECTS = [
     { id: 3, name: 'API Documentation', description: 'Complete API docs for external developers', status: 'active' }
 ];
 
+const MOCK_TASKS = {
+    1: {
+        incomplete: [
+            { id: 1, title: 'Design homepage mockup' },
+            { id: 2, title: 'Update color palette' },
+            { id: 3, title: 'Create component library' }
+        ],
+        completed: [
+            { id: 4, title: 'Research competitor sites' },
+            { id: 5, title: 'Gather stakeholder feedback' }
+        ]
+    },
+    2: {
+        incomplete: [
+            { id: 6, title: 'Set up CI/CD pipeline' },
+            { id: 7, title: 'Test on iOS devices' },
+            { id: 8, title: 'Submit to App Store' }
+        ],
+        completed: [
+            { id: 9, title: 'Build authentication flow' },
+            { id: 10, title: 'Implement push notifications' }
+        ]
+    },
+    3: {
+        incomplete: [
+            { id: 11, title: 'Document REST endpoints' },
+            { id: 12, title: 'Add code examples' },
+            { id: 13, title: 'Review with engineering team' }
+        ],
+        completed: [
+            { id: 14, title: 'Set up documentation site' },
+            { id: 15, title: 'Write authentication guide' }
+        ]
+    }
+};
+
 // ========================================
 // ROUTER
 // ========================================
@@ -109,6 +145,24 @@ function ProjectCard(project) {
     return card;
 }
 
+function TaskItem(task, isCompleted = false) {
+    const item = document.createElement('div');
+    item.className = isCompleted ? 'task-item task-completed' : 'task-item';
+    
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.checked = isCompleted;
+    checkbox.disabled = true; // No interaction on Day 3
+    
+    const title = document.createElement('span');
+    title.textContent = task.title;
+    
+    item.appendChild(checkbox);
+    item.appendChild(title);
+    
+    return item;
+}
+
 // ========================================
 // VIEWS
 // ========================================
@@ -138,13 +192,73 @@ const views = {
     },
 
     projectDetail: (params) => {
-        return `
-            <div class="view-project-detail">
-                <h1>Project: ${params.id}</h1>
-                <p>Project overview will go here</p>
-                <a href="#/projects">← Back to Projects</a>
-            </div>
-        `;
+        const container = document.createElement('div');
+        container.className = 'view-project-detail';
+        
+        // Find project
+        const project = MOCK_PROJECTS.find(p => p.id == params.id);
+        if (!project) {
+            container.innerHTML = '<p>Project not found</p>';
+            return container;
+        }
+        
+        // Back link
+        const backLink = document.createElement('a');
+        backLink.href = '#/projects';
+        backLink.className = 'back-link';
+        backLink.textContent = '← Back to Projects';
+        container.appendChild(backLink);
+        
+        // Project header
+        const header = document.createElement('div');
+        header.className = 'project-header';
+        
+        const name = document.createElement('h1');
+        name.textContent = project.name;
+        
+        const description = document.createElement('p');
+        description.textContent = project.description;
+        
+        header.appendChild(name);
+        header.appendChild(description);
+        container.appendChild(header);
+        
+        // Get tasks for this project
+        const tasks = MOCK_TASKS[params.id] || { incomplete: [], completed: [] };
+        
+        // Incomplete tasks section
+        const incompleteSection = document.createElement('div');
+        incompleteSection.className = 'task-section';
+        
+        const incompleteHeading = document.createElement('h2');
+        incompleteHeading.textContent = 'Incomplete';
+        incompleteSection.appendChild(incompleteHeading);
+        
+        const incompleteList = document.createElement('div');
+        incompleteList.className = 'task-list';
+        tasks.incomplete.forEach(task => {
+            incompleteList.appendChild(TaskItem(task, false));
+        });
+        incompleteSection.appendChild(incompleteList);
+        container.appendChild(incompleteSection);
+        
+        // Completed tasks section
+        const completedSection = document.createElement('div');
+        completedSection.className = 'task-section';
+        
+        const completedHeading = document.createElement('h2');
+        completedHeading.textContent = 'Completed';
+        completedSection.appendChild(completedHeading);
+        
+        const completedList = document.createElement('div');
+        completedList.className = 'task-list';
+        tasks.completed.forEach(task => {
+            completedList.appendChild(TaskItem(task, true));
+        });
+        completedSection.appendChild(completedList);
+        container.appendChild(completedSection);
+        
+        return container;
     },
 
     info: () => {

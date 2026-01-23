@@ -76,3 +76,76 @@ body {
     color: #666;
     font-size: 0.9rem;
 }
+
+/* ========================================
+   PROJECT DETAIL
+   ======================================== */
+
+.back-link {
+    display: inline-block;
+    margin-bottom: 1rem;
+    color: #333;
+    text-decoration: none;
+}
+
+.back-link:hover {
+    text-decoration: underline;
+}
+
+.project-header {
+    margin-bottom: 2rem;
+}
+
+.project-header h1 {
+    margin: 0 0 0.5rem 0;
+}
+
+.project-header p {
+    margin: 0;
+    color: #666;
+    font-size: 1rem;
+}
+
+.task-section {
+    margin-bottom: 2rem;
+}
+
+.task-section h2 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0 0 1rem 0;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #666;
+}
+
+.task-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.task-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+}
+
+.task-item input[type="checkbox"] {
+    cursor: not-allowed;
+}
+
+.task-item span {
+    flex: 1;
+}
+
+.task-completed {
+    opacity: 0.6;
+}
+
+.task-completed span {
+    text-decoration: line-through;
+    color: #666;
+}
