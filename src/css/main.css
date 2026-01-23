@@ -1,0 +1,46 @@
+/* ========================================
+   APP SHELL
+   ======================================== */
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: system-ui, -apple-system, sans-serif;
+}
+
+.app-nav {
+    background: #333;
+    padding: 1rem;
+    display: flex;
+    gap: 1.5rem;
+}
+
+.app-nav a {
+    color: white;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.app-nav a:hover {
+    text-decoration: underline;
+}
+
+#app-view {
+    padding: 2rem;
+}
+
+/* ========================================
+   VIEW PLACEHOLDERS
+   ======================================== */
+
+.view-projects,
+.view-project-detail,
+.view-info {
+    max-width: 800px;
+}
+
+.view-projects h1,
+.view-project-detail h1,
+.view-info h1 {
+    margin-top: 0;
+}
