@@ -68,7 +68,7 @@ routes = {
             "type": "application/javascript",
             "bytes": False,
         },
-        "/task": "get_task_handler",
+        "/task": {"get_task_handler"},
         "/task-label": "get_task_label_handler",
         "/account": "get_account_handler",
         },

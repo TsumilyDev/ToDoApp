@@ -14,8 +14,11 @@ from memory import (
     DataExpiredError,
     Memory
 )
+from secrets import token_urlsafe
 
 backendMemory = Memory()
+backendMemory.add_container("get_request_limiting")
+backendMemory.add_container("request_limiting")
 
 logger = logging.getLogger(__name__)
 logger.addHandler()
@@ -30,15 +33,33 @@ REQUESTS_RATE_LIMITING_CAP = 50
 GET_REQUESTS_RATE_LIMITING_CAP = 500
 RATE_LIMITING_INTERVAL = 30
 
+ROLES = {
+    "public": 0,
+    "user": 1,
+    "admin": 2,
+    "developer": 3,
+}
+
 # Handler names from all files follow the same pattern: {method}_{name}_handler.
 
 class request_handler(BaseHTTPRequestHandler):
+    def __init__(self) -> None:
+        self.server_locked: bool = False
+        super.__init__()
+        return None
+
     def handle_one_request(self) -> None:
         """Handle a single HTTP request."""
+        if self.server_locked:
+            self.requestline = ''
+            self.request_version = ''
+            self.command = ''
+            self.send_error(HTTPStatus.SERVICE_UNAVAILABLE)
+            return None
         self.close_connection = True
         self.response_headers = {}
         try:
-            # No route in server should be longer than 400 characters
+            # No route in server should be longer than 399 characters
             self.raw_requestline = self.rfile.readline(400)
             if len(self.raw_requestline) > 399: 
                 self.requestline = ''
@@ -59,12 +80,6 @@ class request_handler(BaseHTTPRequestHandler):
                 if self.request_version_number < 1.1:
                     self.send_error(HTTPStatus.HTTP_VERSION_NOT_SUPPORTED)
                     return None
-
-                cookie = SimpleCookie()
-                cookie.load(self.headers.get("cookie", ""))
-                self.session_id = (
-                    cookie["session_id"].value if "session_id" in cookie else None
-                    )
             except Exception as error:
                 print(error)
                 self.send_error(HTTPStatus.INTERNAL_SERVER_ERROR)
@@ -77,18 +92,19 @@ class request_handler(BaseHTTPRequestHandler):
         except TimeoutError as e:
             # Discarding this connection because a read or write timed out.
             self.log_error("Request timed out: %r", e)
-            self.close_connection = True
             return None
 
     def server_firewall(self) -> bool:
-        """
-        Invokes the server firewall.
-
-        The firewall is responsible for setting security, parsing, and setting the
+        """Responsible for setting security, parsing, and setting the
         context for the request.
 
         Returns True if the request was not blocked.
         """
+        # Getting cookies
+        cookie = SimpleCookie()
+        cookie.load(self.headers.get("cookie", ""))
+        self.cookies = cookie
+
         # Rate Limiting
         if self.command == "GET":
             result = self._increment_rate_limit(
@@ -102,68 +118,36 @@ class request_handler(BaseHTTPRequestHandler):
         # Parsing request
         self._parse_path()
 
-        # UPDATE: This makes a DB call for every request. This is very unreasonable, 
-        # fix this.
-        if not self.authenticate_request():
-            return False
-
         if self.command not in ["HEAD", "GET"]:
-            self.parse_request_body()
-
-        return True
-
-    def authenticate_request(self) -> bool:
-        """Uses the database to fully authenticate request then sets user information
-        as a class attribute.
-        """
-        if self.session_id is None:
-            self.user_information["rank"] = "public"
-            return True
-
-        try:
-            cursor.execute("SELECT * FROM accounts WHERE session_id = ?",
-                           (self.session_id,))
-            user_information = cursor.fetchone()
-        except sql_err:
-            self.send_error(HTTPStatus.INTERNAL_SERVER_ERROR)
-            return False
-
-        if user_information is None:
-            self.remove_cookie("session_id")
-            self.user_information["rank"] = "public"
-            return True
-
-        self.logged_in = True
-        self.user_information = dict(user_information)
+            return self.parse_request_body()
         return True
 
     def _increment_rate_limit(self, container:str, cap:int) -> bool:
         """
         Limits the amount of requests that the server will handle in order to protect
-        from DOS attacks. 
+        from DDOS attacks. 
 
         Invoked by the server firewall.
         """
-        # UPDATE: Make this use an IP address instead if they're not logged in.
-        # Stripe must never be blocked.
+        request_identifier = self.get_request_identifier()
         try:
-            data = backendMemory.retrieve_data(
+            requests_amount = backendMemory.retrieve_data(
                 container,
-                self.session_id
+                request_identifier
                 ) 
-            if data >= cap:
+            if requests_amount >= cap:
                 self.send_error(
                     HTTPStatus.TOO_MANY_REQUESTS,
                     f"""Try again in
-                    {backendMemory[container][self.session_id].ttl} seconds."""
+                    {backendMemory[container][request_identifier].ttl} seconds."""
                     )
                 return False
-            backendMemory[container][self.session_id] += 1
+            backendMemory[container][request_identifier] += 1
             return True
         except (ObjectNotFoundError, DataExpiredError):
             backendMemory.add_data(
                 container,
-                self.session_id,
+                request_identifier,
                 RATE_LIMITING_INTERVAL,
                 1,
                 overwrite = True
@@ -193,6 +177,18 @@ class request_handler(BaseHTTPRequestHandler):
         self.path = self.path.lower().strip()
         self.path = self.path.rstrip("/")
         return None
+    
+    def get_request_identifier(self):
+        """
+        Returns a unique and presistant request identifier.
+        creates one if there isn't one.
+        """
+        if self.cookies["session_id"] is not None:
+            return self.cookies["session_id"]
+        if self.cookies["public_id"]:
+            return self.cookies["public_id"]
+        self.set_cookie("public_id") = token_urlsafe(64)
+        return self.cookies["public_id"]
 
     def parse_request_body(self) -> bool:
         """
@@ -200,14 +196,44 @@ class request_handler(BaseHTTPRequestHandler):
         self.parsed_request_body
         """
         length = int(self.headers.get("Content-Length", None))
-        if length > 1000:
+        if length > 1500:
             self.send_error(HTTPStatus.BAD_REQUEST)
             return False
         if length is None or length == 0:
-            logger.debug(f"length is {length}", exc=True, stack_info=True)
+            logger.debug(f"length is {length}", stack_info=True)
             self.parsed_request_body = ""
             return True
         self.parsed_request_body = self.rfile.read(length).decode()
+        return True
+
+    def authenticate_request(self) -> bool:
+        """Uses the database to fully authenticate request then sets user information
+        as a class attribute.
+        
+        Also sets self.is_logged_in.
+        """
+        if self.cookies["session_id"] is None:
+            self.user_information["role"] = ROLES["public"]
+            self.is_logged_in = False
+            return True
+
+        try:
+            cursor.execute("SELECT * FROM accounts WHERE session_id = ?",
+                           (self.cookies["session_id"],))
+            user_information = cursor.fetchone()
+        except sql_err:
+            self.send_error(HTTPStatus.INTERNAL_SERVER_ERROR)
+            self.is_logged_in = False
+            return False
+
+        if user_information is None:
+            self.remove_cookie("session_id")
+            self.user_information["role"] = ROLES["public"]
+            self.is_logged_in = False
+            return True
+
+        self.is_logged_in = True
+        self.user_information = dict(user_information)
         return True
 
     def send_http_response(
@@ -239,14 +265,23 @@ class request_handler(BaseHTTPRequestHandler):
         return None
 
     def route(self) -> None:
-        method_routes = routes.get(self.command)
+        method_routes: dict = routes.get(self.command)
         if method_routes is None:
             self.send_http_response(HTTPStatus.METHOD_NOT_ALLOWED)
             return None
-        handler = method_routes.get(self.path)
+
+        handler: dict = method_routes.get(self.path)
         if handler is None:
             self.send_http_response(HTTPStatus.NOT_FOUND)
             return None
+
+        min_role = handler.get("role", 0)
+        if min_role < ROLES["public"]:
+            self.authenticate_request()
+        if self.user_information["role"] < min_role:
+            self.send_error(HTTPStatus.UNAUTHORIZED)
+            return None
+
         if callable(handler):
             handler(self)
         else:
@@ -256,8 +291,7 @@ class request_handler(BaseHTTPRequestHandler):
                     file_info = f.read()
                 except Exception as e:
                     logger.log(logging.ERROR, e, exc_info=True)
-            self.send_http_response(200, body=file_info, type=handler.type)
-
+            self.send_http_response(200, body=file_info, type=handler[1])
         return None
         
     def set_cookie(
@@ -268,10 +302,12 @@ class request_handler(BaseHTTPRequestHandler):
             f"""{key}={value}; SameSite={SameSite};
             HttpOnly; Max-Age={Max_Age}; Path=/""",
         ))
+        self.cookies[key] = value
         return None
 
     def remove_cookie(self, key:str) -> None:
         self.response_headers.append(("Set-Cookie", 
             f"""{key}=; SameSite=Strict; HttpOnly; Max-Age=0; Path=/"""
         ))
+        del self.cookies[key]
         return None
