@@ -1,4 +1,5 @@
-# Task Handlers 
+# Task Handlers
+
 
 def get_all_tasks_handler(self) -> None:
     """
@@ -8,12 +9,10 @@ def get_all_tasks_handler(self) -> None:
     ...
 
 
-def delete_task_handler(self) -> None:
-    ...
+def delete_task_handler(self) -> None: ...
 
 
-def post_task_handler(self) -> None:
-    ...
+def post_task_handler(self) -> None: ...
 
 
 def patch_task_handler(self) -> None:
@@ -32,9 +31,8 @@ def get_task_handler(self) -> None:
     ...
 
 
-
-
 # Task Label Handlers
+
 
 def get_task_label_handler(self) -> None:
     """
@@ -54,7 +52,7 @@ def delete_task_label_handler(self) -> None:
 def post_task_label_handler(self) -> None:
     """
     Allows the user to create a label for tasks in the database. The user is required
-    to provide 
+    to provide
     """
     ...
 
@@ -66,8 +64,5 @@ def patch_task_label_handler(self) -> None:
     """
     ...
 
-def get_all_task_labels_handler(self) -> None:
-    ...
 
-
-
+def get_all_task_labels_handler(self) -> None: ...

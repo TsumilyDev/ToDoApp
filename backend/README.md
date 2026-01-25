@@ -3,6 +3,10 @@
 The backend is synchronous and requests will be held until they can be processed by the
 backend.
 
+## Server Design
+
+All input and output have to be in JSON format.
+
 ## The Cache
 The backend uses a custom Memory class for its cache. The Memory class offers basic
 functionality and works greatly as a cache, providing speed and simplicity. It would
@@ -127,6 +131,16 @@ BEGIN
         strftime('%s', 'now')
     );
 END);
+
+CREATE TRIGGER IF NOT EXISTS session_refresh_time_trigger
+AFTER UPDATE OF session_id ON accounts
+FOR EACH ROW
+WHEN OLD.session_id IS NOT NEW.session_id
+BEGIN
+    UPDATE tasks
+    set session_id_creation_time = strftime('%s', 'now')
+    where session_id = NEW.session_id;
+END;
 ```
 
 ### Pragma

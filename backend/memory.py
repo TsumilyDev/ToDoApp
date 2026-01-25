@@ -103,12 +103,10 @@ class Memory:
             "process_information": {},
         }
 
-        self.container_guides = {
-            "process_information": """
+        self.container_guides = {"process_information": """
             The backend and frontend may exchange several times to complete a 
             singular process for the user, the information between each
-            exchange will be saved here."""
-        }
+            exchange will be saved here."""}
 
         self.memoryName = name
         self.documentation = ""
@@ -119,7 +117,7 @@ class Memory:
             with open(f"/files/{self.memoryName}.aof", "x") as file:
                 return
         except FileExistsError:
-            return # TODO
+            return  # TODO
 
     # -- CRUD and general-interactions
     def add_data(
@@ -161,10 +159,8 @@ class Memory:
             raise ObjectNotFoundError(f"Container '{container}' does not exist.")
         payload = self.memory.get(container).get(identifier)
         if not payload:
-            raise ObjectNotFoundError(
-                f"""Identifer '{identifier}' 
-                does not exist in container '{container}'"""
-            )
+            raise ObjectNotFoundError(f"""Identifer '{identifier}' 
+                does not exist in container '{container}'""")
         if payload.is_expired():
             del self.memory[container][identifier]
             raise DataExpiredError(
@@ -313,28 +309,28 @@ class Memory:
 
     #     self.memory.update(json.loads(JSON))
 
-
-
     # extension methods, these were not part of the original class but were added for
     # convenience sake.
 
-    def __setitem__(self, container_name:str, container_guide:str="") -> None:
+    def __setitem__(self, container_name: str, container_guide: str = "") -> None:
         """Creates a new container, which is just a plain dictionary inside memory.
 
         Containers are used as seperators of concerns regarding values.
         A guide will be created automatically and be empty by default.
         """
         if container_name in self.memory:
-            raise ObjectAlreadyExistsError(f"Can not create container, {container_name}, because it already exists.")
+            raise ObjectAlreadyExistsError(
+                f"Can not create container, {container_name}, because it already exists."
+            )
         self.memory[container_name] = {}
-        self.container_guides[container_name] = container_guide 
+        self.container_guides[container_name] = container_guide
         return None
-    
-    def add_container(self, container_name:str, container_guide:str="") -> None:
+
+    def add_container(self, container_name: str, container_guide: str = "") -> None:
         self[container_name] = container_guide
         return None
 
-    def remove_container(self, container:str) -> None:
+    def remove_container(self, container: str) -> None:
         """Removes a container, seperator of concern, from memory and the guide for that container."""
         if not container in self.memory:
             raise ObjectNotFoundError(f"Container {container} does not exist.")

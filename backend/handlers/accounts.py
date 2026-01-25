@@ -1,276 +1,291 @@
 from sqlite3 import (
-    Row,
     Error as SqlErr,
-    connect,
+    IntegrityError as SqlIntegrityErr,
 )
-from os import environ
-from time import time
-import secrets
+from secrets import token_urlsafe
 import bcrypt
 import email_validator
-import phonenumbers
-import re
 import json
+from backend.handlers.dbWrapper import (
+    server_interact_with_row,
+    server_insert_row,
+    server_update_cells,
+    update_cells,  # For lower level control
+)
+import logging
 from http import HTTPStatus
+import re
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from backend.router.RequestHandler import request_handler
+
+logger = logging.getLogger(__name__)
 
 # These are all the fields that are provided and modifiable by the user.
-USER_FIELDS = {
-    "user_email",
-    "user_password",
-    "user_first_name",
-    "user_last_name",
-    "user_phone_number",
-}
-
-nameRegex = r"^[a-zA-Z]{2-80}$"
+USER_FIELDS = {"user_email", "user_password", "username"}
+PASSWORD_MAX_LENGTH, USERNAME_MAX_LENGTH = 30
+PASSWORD_MIN_LENGTH = 8
+USERNAME_MIN_LENGTH = 3
 
 
-SQLITE3_PATH = environ["SQLITE3_PATH"]
-db = connect(SQLITE3_PATH)
-db.row_factory = Row
-cursor = db.cursor()
-
-
-def invalid_information(self):
+def invalid_information(self, msg: str = "Invalid Information"):
     destroy_session(self)
-    self.send_http_response(HTTPStatus.BAD_REQUEST, "Invalid Information.")
-    return
-
-
-def create_account_handler(self) -> None:
-    """
-    This function validiates information, then creates an account in the
-    database, then sends the HTTP request.
-    """
-    try:
-        user_email = str(self.self.email).strip().lower()
-        user_password = str(self.body.password).strip()
-        user_first_name = str(self.body.first_name).strip().lower()
-        user_last_name = str(self.body.last_name).strip().lower()
-        user_phone_number = str(self.body.phone_number).strip()
-    except:  # UPDATE : Try remove this bare except statement by assigning it an error
-        invalid_information(self)
-        return
-
-    # --- Parsing all the information(Could be put inside a helper-function to
-    # make the pipeline clearer, but I'm not sure if Hens would agree)
-
-    try:
-        email_validator.validate_email(user_email)
-    except email_validator.EmailNotValidError:
-        invalid_information(self)
-        return
-
-    try:
-        user_phone_number_obj = phonenumbers.parse(user_phone_number)
-    except phonenumbers.NumberParseException:
-        invalid_information(self)
-        return
-    if not phonenumbers.is_valid_number(user_phone_number_obj):
-        invalid_information(self)
-        return
-
-    if not re.fullmatch(nameRegex, user_first_name) or not re.fullmatch(
-        nameRegex, user_last_name
-    ):
-        invalid_information(self)
-        return
-
-    # Nothing crazy like a special character or not including your information
-    # -- MAY CHANGE IN THE FUTURE # UPDATE
-    if not len(user_password) >= 8 or user_password.isalnum:
-        invalid_information(self)
-        return
-
-    for field in USER_FIELDS:
-        if len(field) > 300:
-            invalid_information(self)
-            return
-
-    user_password = bcrypt.hashpw(user_password.encode(), bcrypt.gensalt()).decode()
-
-    # --- Creating the account.
-    try:
-        cursor.execute(
-            """
-            INSERT INTO accounts (
-                    email,
-                    password,
-                    first_name,
-                    last_name,
-                    phone_number)
-                    VALUES (?, ?, ?, ?, ?)""",
-            (
-                user_email,
-                user_password,
-                user_first_name,
-                user_last_name,
-                user_phone_number,
-            ),
-        )
-        cx.commit()
-    except sqlite3.IntegrityError:
-        cx.rollback()
-        self.send_http_response(
-            HTTPStatus.BAD_REQUEST, "This Phone Number Or Email Is Already In Use"
-        )
-        return
-    except sqlite3.Error:
-        cx.rollback()
-        self.send_500()
-        return
-
-    self.send_http_response(HTTPStatus.CREATED, "Account Has Been Created.")
-    return
-
-
-def check_if_user_logged_in_handler(self: object) -> None:
-    if not self.is_logged_in:
-        self.send_http_response(HTTPStatus.UNAUTHORIZED, "User Is Not Logged In")
-        return None
-
-    self.send_http_response(HTTPStatus.OK, "User Logged In")
+    self.send_http_response(HTTPStatus.BAD_REQUEST, msg)
     return None
 
 
-def delete_account_handler(self: object) -> None:
-    try:
-        cursor.execute("DELETE FROM accounts WHERE session_id = ?", (self.session_id,))
-        cx.commit()
-    except sqlite3.Error:
-        cx.rollback()
-        self.send_500()
-        return
+def post_account_handler(self: request_handler) -> None:
+    """
+    This handler validiates account information then creates an account in the
+    database.
 
-    if cursor.rowcount < 1:
-        self.remove_cookie("session_id")
-        self.send_http_response(HTTPStatus.NOT_FOUND, "Bad Request")
-        return
+    ### Expected schema
+    A normal dictionary
+    >>> {
+    >>> "key": value
+    >>> "key": value
+    >>> }
+    """
+    try:
+        user_email = str(self.body["email"]).strip().lower()
+        username = str(self.body["username"]).strip()
+        user_password = str(self.body["password"]).strip()
+    except ValueError:
+        invalid_information(self)
+        return None
+
+    if (
+        not is_valid_email(user_email)
+        or not is_valid_username(username)
+        or not is_valid_password(user_password)
+    ):
+        invalid_information()
+        return None
+
+    user_password = bcrypt.hashpw(user_password.encode(), bcrypt.gensalt()).decode()
+
+    # --- Creating the account
+    server_insert_row(
+        self,
+        "accounts",
+        ("email", "password", "username"),
+        (user_email, user_password, username),
+        user_err_msg="Username Or Email Is Already In Use",
+        send_response_on_success=True,
+        strict=True,
+    )
+    return None
+
+
+def post_session_handler(self: request_handler) -> None:
+    try:
+        target_email = str(self.body["email"])
+        target_password = str(self.body["password"])
+    except (ValueError, TypeError):
+        self.send_http_response(HTTPStatus.BAD_REQUEST)
+        return None
+
+    cursor = server_interact_with_row(self, "accounts", "email", target_email, "select")
+    results = cursor.fetchall()
+    stored_password = results["password"]
+
+    if bcrypt.checkpw(target_password.encode(), stored_password.encode()):
+        if create_session(self, target_email):
+            self.send_http_response(HTTPStatus.CREATED)
+            return None
+        self.send_http_response(HTTPStatus.INTERNAL_SERVER_ERROR)
+        return None
+    else:
+        self.send_http_response(HTTPStatus.UNAUTHORIZED)
+        return None
+
+
+def delete_account_handler(self: request_handler) -> None:
     self.remove_cookie("session_id")
-    self.send_http_response(HTTPStatus.OK, "Account Deleted")
-    return
+    server_interact_with_row(
+        self,
+        "accounts",
+        "session_id",
+        self.session_id,
+        "delete",
+        strict=True,
+        send_response_on_success=True,
+    )
+    return None
 
 
-def get_user_information_handler(self: object) -> None:
-    del self.user_information["user_id"]
+def get_account_handler(self: request_handler) -> None:
+    del self.user_information["id"]
     self.send_http_response(HTTPStatus.OK, json.dumps(self.user_information))
-    return
+    return None
 
 
-def update_account_handler(self: object) -> None:
-    # Expected Schema: [(Field, new-value, old_value), (Field, new-value, old_value)]
-    try:
-        for field, new_value, old_value in self.body:
-            if field not in USER_FIELDS:
-                raise ValueError
-            cursor.execute(
-                f"SELECT {field} FROM accounts WHERE session_id = ?",
-                (self.user_information["session_id"],),
-            )
-            row = cursor.fetchone()
-            if row is None:
-                raise ValueError
+def patch_account_handler(self: request_handler) -> None:
+    """
+    Expected Schema:
+    >>> {
+    >>> field: [new-value, old_value]
+    >>> field: [new-value, old_value]
+    >>> }
+    """
+    dict.keys()
+    fields = list(self.body.keys())
+    new_values = list(field(0) for field in fields)
+    old_values = list(field(1) for field in fields)
+    if len(fields) != len(new_values) != len(old_values):
+        self.send_http_response(HTTPStatus.BAD_REQUEST)
+        return None
 
-            if field == "password":
-                if bcrypt.checkpw(old_value.encode(), row[field].encode()):
-                    matches = True
-                    new_value = bcrypt.hashpw(
-                        new_value.encode(), bcrypt.gensalt()
-                    ).decode()
-                else:
-                    matches = False
-            else:
-                matches = str(old_value) == str(row[field])
+    if "password" in fields:
+        pass_idx = fields.index("password")
+        if not is_valid_password(new_values[pass_idx]):
+            self.send_http_response(HTTPStatus.BAD_REQUEST)
+        old_values[pass_idx] = bcrypt.hashpw(
+            old_values[pass_idx].encode, bcrypt.gensalt()
+        ).decode()
+        new_values[pass_idx] = bcrypt.hashpw(
+            new_values[pass_idx].encode, bcrypt.gensalt()
+        ).decode()
 
-            if matches:
-                cursor.execute(
-                    f"UPDATE accounts SET {field} = ? WHERE user_id = ?",
-                    (new_value, self.user_information["user_id"]),
-                )
-            else:
-                cx.rollback()
-                self.send_http_response(HTTPStatus.BAD_REQUEST, "Incorrect Value")
-                return
-    except (ValueError, sqlite3.IntegrityError):
-        cx.rollback()
-        self.send_http_response(HTTPStatus.BAD_REQUEST, "Bad Request")
-        return
-    except sqlite3.Error:
-        cx.rollback()
-        self.send_500()
-        return
-    cx.commit()
+    if "username" in fields:
+        username_idx = fields.index("username")
+        if not is_valid_username(new_values[username_idx]):
+            self.send_http_response(HTTPStatus.BAD_REQUEST)
 
-    self.send_http_response(HTTPStatus.OK, "Updates Completed")
-    return
+    if "email" in fields:
+        email_idx = fields.index("email")
+        if not is_valid_email(new_values[email_idx]):
+            self.send_http_response(HTTPStatus.BAD_REQUEST)
+
+    server_update_cells(
+        self,
+        "account",
+        fields,
+        old_values,
+        fields,
+        new_values,
+        strict=True,
+        second_search_column="id",
+        second_search_value=self.user_information["id"],
+        send_response_on_success=True,
+    )
+    return None
 
 
-def logout_of_account_handler(self: object) -> None:
-    result = destroy_session(self)
-    self.send_http_response(result["code"], result["message"])
-    return
+def get_session_handler(self: request_handler) -> None:
+    (
+        self.send_http_response(HTTPStatus.UNAUTHORIZED)
+        if self.is_logged_in
+        else self.send_http_response(HTTPStatus.OK)
+    )
+    return None
+
+
+def delete_session_handler(self: request_handler) -> None:
+    self.remove_cookie("session_id")
+    server_update_cells(
+        self,
+        "accounts",
+        ["session_id"],
+        [self.cookies["session_id"]],
+        ["session_id"],
+        [None],
+        strict=True,
+        send_response_on_success=True,
+    )
+    return None
 
 
 # -------------------
 # Helper Functions:
 
 
-def create_session(self, email) -> bool:
-    session_id = secrets.token_urlsafe(64)
+def create_session(self: request_handler) -> bool:
+    session_id = token_urlsafe(64)
     try:
-        cursor.execute(
-            "UPDATE accounts SET session_id = ? WHERE email = ?", (session_id, email)
+        update_cells(
+            "accounts",
+            ["email"],
+            [self.user_information["email"]],
+            ["session_id"],
+            session_id,
         )
-        cursor.execute("UPDATE acounts SET last_session_refresh = ?", (int(time())))
         # UPDATE : Make it so sessions get removed automatically from the db after the
         # cookie expiry.
-        cx.commit()
-    except sqlite3.IntegrityError:
-        cx.rollback()
+    except SqlIntegrityErr:
         try:
-            return create_session(self, email)
+            return create_session(self)
         except RecursionError:
             return False
-    except sqlite3.Error:
-        cx.rollback()
+    except SqlErr:
         return False
 
     self.set_cookie("session_id", session_id)
     return True
 
 
-def destroy_session(self: object) -> object:
-    cookie_header = self.headers.get("Cookie")
-    if not cookie_header:
-        return {
-            "code": HTTPStatus.BAD_REQUEST,
-            "message": "Bad Request",
-        }
-    session_id = re.search(r"session_id *= *([^;]+)", cookie_header)
-    session_id = session_id.group(1).strip()
-    if not session_id:
-        return {
-            "code": HTTPStatus.BAD_REQUEST,
-            "message": "Bad Request",
-        }
-    # Get user information from the database.
+def destroy_session(self: request_handler) -> int:
+    if self.cookies["session_id"]:
+        self.remove_cookie("session_id")
+    else:
+        return HTTPStatus.BAD_REQUEST
     try:
-        cursor.execute(
-            "UPDATE accounts SET session_id = '' WHERE session_id = ?", (session_id,)
+        update_cells(
+            "accounts",
+            ["session_id"],
+            [self.cookies["session_id"]],
+            ["session_id"],
+            [None],
         )
-        cx.commit()
-    except sqlite3.Error:
-        cx.rollback()
-        return {
-            "code": HTTPStatus.INTERNAL_SERVER_ERROR,
-            "message": "Internal Server Error",
-        }
+    except SqlErr:
+        return (HTTPStatus.INTERNAL_SERVER_ERROR,)
 
-    self.remove_cookie("session_id")
-    if cursor.rowcount < 1:
-        return {"code": HTTPStatus.BAD_REQUEST, "message": "Bad Request"}
+    return HTTPStatus.OK
 
-    return {
-        "code": HTTPStatus.OK,
-        "message": "Logged Out Of Account",
-    }
+
+nameRegex = r"^[a-zA-Z0-9]{2-80}$"
+
+
+def is_valid_username(username: str) -> bool:
+    """
+    The password must be: inclusive of letters; under max-length; above min-length,
+    and fully ASCII.
+
+    Usernames like '999999999999999999a' are allowed, which could be an issue
+    """
+    if not isinstance(username, str):
+        return False
+    if len(username) > USERNAME_MAX_LENGTH or len(username) < USERNAME_MIN_LENGTH:
+        return False
+    if not username.isalnum() and not username.isalpha():
+        return False
+    if re.fullmatch(nameRegex, username) is None:
+        return False
+    return True
+
+
+def is_valid_password(password: str) -> bool:
+    """
+    The password must be: alpha-numeric; under max-length; above min-length,
+    and fully ASCII.
+    """
+    if not isinstance(password, str):
+        return False
+    if len(password) > PASSWORD_MAX_LENGTH or len(password) < PASSWORD_MIN_LENGTH:
+        return False
+    if not password.isalnum():
+        return False
+    if not password.isascii():
+        return False
+    return True
+
+
+def is_valid_email(email: str) -> bool:
+    if not isinstance(email, str):
+        return False
+    try:
+        email_validator.validate_email(email)
+        return True
+    except email_validator.EmailNotValidError:
+        return False
