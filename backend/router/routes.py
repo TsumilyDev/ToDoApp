@@ -112,4 +112,3 @@ routes = {
         "/session": (delete_session_handler, ROLES["account"]),
     },
 }
-

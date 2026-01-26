@@ -104,7 +104,7 @@ class request_handler(BaseHTTPRequestHandler):
             return None
 
         if isinstance(route_path, dict):
-            min_role:int = route_path.get('min_role', 0)
+            min_role: int = route_path.get("min_role", 0)
         elif isinstance(route_path, tuple):
             handler, min_role = route_path
         else:
