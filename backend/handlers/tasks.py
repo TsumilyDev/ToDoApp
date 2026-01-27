@@ -3,8 +3,8 @@
 
 def get_all_tasks_handler(self) -> None:
     """
-    Responds with all the user-allowed information about every task stored in the
-    database.
+    Responds with all the user-allowed information about every task stored in
+    the database.
     """
     ...
 

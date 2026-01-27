@@ -11,7 +11,9 @@ def memory_demonstration():
 
     mem.add_data("test_container", "identifier", 1, "data")
     sleep(1)
-    mem.retrieve_data("test_container", "identifier")  # Throws a DataExpiredError
+    mem.retrieve_data(
+        "test_container", "identifier"
+    )  # Throws a DataExpiredError
 
 
 if __name__ == "__main__":

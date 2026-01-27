@@ -6,10 +6,13 @@ from sqlite3 import (
     connect,
     Cursor,
 )
-from os import environ
 import logging
 from http import HTTPStatus
+from dotenv import load_dotenv
+from os import environ
+from os.path import dirname
 
+load_dotenv(dirname(__file__) + r"\..\..\.env")
 logger = logging.getLogger(__name__)
 
 SQLITE3_PATH = environ["SQLITE3_PATH"]
@@ -22,7 +25,10 @@ cursor = db.cursor()
 
 
 def interact_with_row(
-    table: str, column: str, identifier: Any, action: Literal["delete", "select"]
+    table: str,
+    column: str,
+    identifier: Any,
+    action: Literal["delete", "select"],
 ) -> Cursor:
     """Wrapper for interacting with rows.
     Returns the cursor.
@@ -31,17 +37,21 @@ def interact_with_row(
     valid information. This will log errors then propagate them.
     """
     try:
-        cursor.execute(f"{action} * FROM {table} WHERE {column} = ?", (identifier,))
+        cursor.execute(
+            f"{action} * FROM {table} WHERE {column} = ?", (identifier,)
+        )
         db.commit()
         return cursor
     except SqlErr as err:
         db.rollback()
         logger.error(
-            f"Experienced an SQL error while doing {action} on a row", exc_info=True
+            f"Experienced an SQL error while doing {action} on a row",
+            exc_info=True,
         )
         raise err
 
 
+# UPDATE: Make this return the rows on success
 def update_cells(
     table: str,
     search_column: list[str],
@@ -63,7 +73,9 @@ def update_cells(
     """
     execution_append = ""
     if second_search_column is not None:
-        execution_append = f"AND {second_search_column} = {second_search_value}"
+        execution_append = (
+            f"AND {second_search_column} = {second_search_value}"
+        )
     try:
         for i in value:
             cursor.execute(
@@ -71,7 +83,7 @@ def update_cells(
                 f"{execution_append}",
                 (value[i], search_value[i]),
             )
-            if strict and cursor.rowcount < 1:
+            if strict and len(cursor.fetchall()) > 1:
                 raise ValueError(
                     f"{search_value[i]} couldn't be found in {search_column[i]}"
                 )
@@ -79,11 +91,60 @@ def update_cells(
         return None
     except SqlErr as err:
         db.rollback()
-        logger.error("Experienced an SQL error while updating cells", exc_info=True)
+        logger.error(
+            "Experienced an SQL error while updating cells", exc_info=True
+        )
         raise err
 
 
-def insert_row(table: str, columns: tuple[str], values: tuple[str]) -> Cursor:
+# UPDATE: Make this return the rows on success
+def update_cell(
+    table: str,
+    search_column: str,
+    search_value: Any,
+    column: str,
+    value: Any,
+    *,
+    strict: bool = True,
+    second_search_column: str | None = None,
+    second_search_value: str | None = None,
+) -> None:
+    """Wrapper for updating one cell. Returns None.
+
+    If strict is True, ValueError will be raised when the search_value wasn't found in
+    the search_column.
+
+    This does not enforce correctness. The caller is still responsible for
+    passing in valid information. This will log errors then propogate them.
+    """
+    execution_append = ""
+    if second_search_column is not None:
+        execution_append = (
+            f"AND {second_search_column} = {second_search_value}"
+        )
+    try:
+        cursor.execute(
+            f"UPDATE {table} SET {column} = ? WHERE {search_column} = ?"
+            f"{execution_append}",
+            (value, search_value),
+        )
+        if strict and len(cursor.fetchall()) > 1:
+            raise ValueError(
+                f"{search_value} couldn't be found in {search_column}"
+            )
+        db.commit()
+        return None
+    except SqlErr as err:
+        db.rollback()
+        logger.error(
+            "Experienced an SQL error while updating cells", exc_info=True
+        )
+        raise err
+
+
+def insert_row(
+    table: str, columns: tuple[str], values: tuple[str]
+) -> Cursor:
     """Wrapper for adding rows
 
     This does not enforce correctness. The caller is still responsible for passing in
@@ -95,7 +156,9 @@ def insert_row(table: str, columns: tuple[str], values: tuple[str]) -> Cursor:
         return cursor
     except SqlErr as err:
         db.rollback()
-        logger.error("Experienced an SQL error while inserting a row", exc_info=True)
+        logger.error(
+            "Experienced an SQL error while inserting a row", exc_info=True
+        )
         raise err
 
 
@@ -111,27 +174,33 @@ def server_interact_with_row(
     server_err_msg: str = "",
     send_response_on_success: bool = False,
     success_msg: str = "",
-) -> None | Cursor:
+) -> None | dict | list:
     """Wrapper for interacting with rows from the backend server.
-    Returns the cursor if succesful, else return None.
+    Returns the row(s) if succesful, else return None.
 
     If strict is True, NotFound will be sent when no rows were updated.
 
-    This does not enforce correctness. The caller is still responsible for passing in
-    valid information. This will log errors then propagate them.
+    This does not enforce correctness. The caller is still responsible for 
+    passing in valid information. This will log errors then propagate them.
     """
     try:
         cursor = interact_with_row(table, column, identifier, action)
-        if strict and cursor.rowcount < 1:
+        rows = cursor.fetchall()
+        if strict and len(rows) > 1:
+            print("I knewww it")
             self.send_http_response(HTTPStatus.NOT_FOUND)
             return None
         if send_response_on_success:
             self.send_http_response(HTTPStatus.OK, success_msg)
-        return cursor
+        if len(rows) == 1:
+            return rows[0]
+        return rows
     except SqlIntegrityErr:
         self.send_http_response(HTTPStatus.BAD_REQUEST, user_err_msg)
     except SqlErr:
-        self.send_http_response(HTTPStatus.INTERNAL_SERVER_ERROR, server_err_msg)
+        self.send_http_response(
+            HTTPStatus.INTERNAL_SERVER_ERROR, server_err_msg
+        )
     return None
 
 
@@ -146,9 +215,9 @@ def server_insert_row(
     server_err_msg: str = "",
     send_response_on_success: bool = False,
     success_msg: str = "",
-) -> None | bool:
+) -> None | dict:
     """Wrapper for inserting rows from the backend server.
-    Returns the cursor if succesful, else returns None.
+    Returns the row(s) if succesful, else returns None.
 
     If strict is True, NotFound will be sent when no rows were updated.
 
@@ -157,16 +226,19 @@ def server_insert_row(
     """
     try:
         cursor = insert_row(table, columns, values)
-        if strict and cursor.rowcount < 1:
+        rows = cursor.fetchall()
+        if strict and len(rows) > 1:
             self.send_http_response(HTTPStatus.NOT_FOUND)
             return None
         if send_response_on_success:
             self.send_http_response(HTTPStatus.OK, success_msg)
-        return cursor
+        return rows
     except SqlIntegrityErr:
         self.send_http_response(HTTPStatus.BAD_REQUEST, user_err_msg)
     except SqlErr:
-        self.send_http_response(HTTPStatus.INTERNAL_SERVER_ERROR, server_err_msg)
+        self.send_http_response(
+            HTTPStatus.INTERNAL_SERVER_ERROR, server_err_msg
+        )
     return None
 
 
@@ -185,7 +257,7 @@ def server_update_cells(
     server_err_msg: str = "",
     send_response_on_success: bool = False,
     success_msg: str = "",
-) -> None:
+) -> None | bool:
     """Wrapper for updating cells from the backend server.
     Returns True if succesful, else returns None.
 
@@ -212,7 +284,9 @@ def server_update_cells(
     except SqlIntegrityErr:
         self.send_http_response(HTTPStatus.BAD_REQUEST, user_err_msg)
     except SqlErr:
-        self.send_http_response(HTTPStatus.INTERNAL_SERVER_ERROR, server_err_msg)
+        self.send_http_response(
+            HTTPStatus.INTERNAL_SERVER_ERROR, server_err_msg
+        )
     except ValueError:
         self.send_http_response(HTTPStatus.BAD_REQUEST, user_err_msg)
     return None

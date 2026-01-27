@@ -44,71 +44,82 @@ routes = {
     # UPDATE: Remove the Bytes value, first ensure that the firewall is ok with that
     # Dicts are assumed to be resources and tuples are assumed to be functions.
     "GET": {
-        "/home": {
-            "path": ".../.../public/html/home.html",
+        "/app": {
+            "path": "public/html/app.html",
             "type": "text/html",
             "bytes": False,
         },
         "/about": {
-            "path": ".../.../public/html/about.html",
+            "path": "public/html/about.html",
             "type": "text/html",
             "bytes": False,
         },
-        "/signup": {
-            "path": ".../.../public/html/signup.html",
+        "/account": {
+            "path": "public/html/account.html",
             "type": "text/html",
             "bytes": False,
         },
-        "/home.css": {
-            "path": ".../.../src/css/home.css",
+        "/app.css": {
+            "path": "src/css/app.css",
             "type": "style/css",
             "bytes": False,
         },
         "/about.css": {
-            "path": ".../.../src/css/about.css",
+            "path": "src/css/about.css",
             "type": "style/css",
             "bytes": False,
         },
-        "/signup.css": {
-            "path": ".../.../src/css/signup.css",
+        "/account.css": {
+            "path": "src/css/account.css",
             "type": "style/css",
             "bytes": False,
         },
-        "/home.js": {
-            "path": ".../.../src/js/home.js",
+        "/app.js": {
+            "path": "src/js/app.js",
             "type": "application/javascript",
             "bytes": False,
         },
         "/about.js": {
-            "path": ".../.../src/js/about.js",
+            "path": "src/js/about.js",
             "type": "application/javascript",
             "bytes": False,
         },
-        "/signup.js": {
-            "path": ".../.../src/js/signup.js",
+        "/account.js": {
+            "path": "src/js/account.js",
             "type": "application/javascript",
             "bytes": False,
         },
-        "/task": (get_task_handler, ROLES["account"]),
-        "/task-label": (get_task_label_handler, ROLES["account"]),
-        "/account": (get_account_handler, ROLES["account"]),
+        "/logo.png": {
+            "path": "public/media/logo.png",
+            "type": "image/png",
+            "bytes": True,
+        },
+        "/task/information": (get_task_handler, ROLES["account"]),
+        "/task-label/information": (
+            get_task_label_handler,
+            ROLES["account"],
+        ),
+        "/account/information": (get_account_handler, ROLES["account"]),
         "/session": (get_session_handler, ROLES["account"]),
     },
     "POST": {
-        "/task": (post_task_handler, ROLES["account"]),
-        "/task-label": (post_task_label_handler, ROLES["account"]),
-        "/account": (post_account_handler, ROLES["public"]),
-        "/session": (post_session_handler, ROLES["public"]),
+        "/task/create": (post_task_handler, ROLES["account"]),
+        "/task-label/create": (post_task_label_handler, ROLES["account"]),
+        "/account/create": (post_account_handler, ROLES["public"]),
+        "/session/create": (post_session_handler, ROLES["public"]),
     },
     "PATCH": {
-        "/task": (patch_task_handler, ROLES["account"]),
-        "/task-label": (patch_task_label_handler, ROLES["account"]),
-        "/account": (patch_account_handler, ROLES["account"]),
+        "/task/update": (patch_task_handler, ROLES["account"]),
+        "/task-label/update": (patch_task_label_handler, ROLES["account"]),
+        "/account/update": (patch_account_handler, ROLES["account"]),
     },
     "DELETE": {
-        "/task": (delete_task_handler, ROLES["account"]),
-        "/task-label": (delete_task_label_handler, ROLES["account"]),
-        "/account": (delete_account_handler, ROLES["account"]),
-        "/session": (delete_session_handler, ROLES["account"]),
+        "/task/delete": (delete_task_handler, ROLES["account"]),
+        "/task-label/delete": (
+            delete_task_label_handler,
+            ROLES["account"],
+        ),
+        "/account/delete": (delete_account_handler, ROLES["account"]),
+        "/session/delete": (delete_session_handler, ROLES["account"]),
     },
 }

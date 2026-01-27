@@ -49,7 +49,14 @@ class Payload:
     """
 
     def __init__(
-        self, container: str, identifier: str, data, ttl: int = 30, /, *, note: str = ""
+        self,
+        container: str,
+        identifier: str,
+        data,
+        ttl: int = 30,
+        /,
+        *,
+        note: str = "",
     ):
         self.data = data
         self.expiration_time = int(time()) + ttl
@@ -59,8 +66,8 @@ class Payload:
         self._identifier = identifier
 
     def __repr__(self) -> str:
-        return f"""Container: '{self._container}' Identifier:' 
-        {self._identifier}'\n Expires at: '{self.expiration_time}'\n Data: 
+        return f"""Container: '{self._container}' Identifier:'
+        {self._identifier}'\n Expires at: '{self.expiration_time}'\n Data:
         '{self.data}'\n Notes: '{self.note}'"""
 
     def __str__(self) -> str:
@@ -69,7 +76,10 @@ class Payload:
     def get_location(self) -> dict:
         """Returns the exact location of the payload by returning the
         container and identifier."""
-        return {"container": "self._container", "identifier": "self._identifier"}
+        return {
+            "container": "self._container",
+            "identifier": "self._identifier",
+        }
 
     def description(self) -> dict:
         """Returns a dictionary with the data, note, and location."""
@@ -104,20 +114,13 @@ class Memory:
         }
 
         self.container_guides = {"process_information": """
-            The backend and frontend may exchange several times to complete a 
+            The backend and frontend may exchange several times to complete a
             singular process for the user, the information between each
             exchange will be saved here."""}
 
         self.memoryName = name
         self.documentation = ""
         self.list = ["hello", "bruh"]
-
-    def initialise(self):
-        try:
-            with open(f"/files/{self.memoryName}.aof", "x") as file:
-                return
-        except FileExistsError:
-            return  # TODO
 
     # -- CRUD and general-interactions
     def add_data(
@@ -134,7 +137,9 @@ class Memory:
         """Creates a data entry and location inside the given container."""
         # Safety checks for container and identifier
         if container not in self.memory:
-            raise ObjectNotFoundError(f"Container '{container}' does not exist.")
+            raise ObjectNotFoundError(
+                f"Container '{container}' does not exist."
+            )
         self.clean_container(container)
         if identity in self.memory[container] and not overwrite:
             raise ObjectAlreadyExistsError(
@@ -156,10 +161,12 @@ class Memory:
         container.
         """
         if container not in self.memory:
-            raise ObjectNotFoundError(f"Container '{container}' does not exist.")
+            raise ObjectNotFoundError(
+                f"Container '{container}' does not exist."
+            )
         payload = self.memory.get(container).get(identifier)
         if not payload:
-            raise ObjectNotFoundError(f"""Identifer '{identifier}' 
+            raise ObjectNotFoundError(f"""Identifer '{identifier}'
                 does not exist in container '{container}'""")
         if payload.is_expired():
             del self.memory[container][identifier]
@@ -169,10 +176,14 @@ class Memory:
             )
         return payload.data
 
-    def retrieve_identifiers_from_data(self, container: str, data: str) -> list:
+    def retrieve_identifiers_from_data(
+        self, container: str, data: str
+    ) -> list:
         """Returns a list of all the identifiers of the given data."""
         if container not in self.memory:
-            raise ObjectNotFoundError(f"Container '{container}' does not exist.")
+            raise ObjectNotFoundError(
+                f"Container '{container}' does not exist."
+            )
         self.clean_container(container)
 
         identifiers = []
@@ -193,7 +204,9 @@ class Memory:
         else returns False.
         """
         if container not in self.memory:
-            raise ObjectNotFoundError(f"Container '{container}' does not exist.")
+            raise ObjectNotFoundError(
+                f"Container '{container}' does not exist."
+            )
         self.clean_container(container)
 
         for payload in self.memory[container].values():
@@ -205,7 +218,9 @@ class Memory:
         """Removes all expired data inside memory."""
         expired = []
         for container_name in list(self.memory.keys()):
-            for identifier, payload in list(self.memory[container_name].items()):
+            for identifier, payload in list(
+                self.memory[container_name].items()
+            ):
                 if payload.is_expired():
                     expired.append(payload.description())
                     del self.memory[container_name][identifier]
@@ -216,7 +231,9 @@ class Memory:
         """Removes all expired data inside the given container."""
         expired = []
         if container not in self.memory:
-            raise ObjectNotFoundError(f"There is no '{container}' container.")
+            raise ObjectNotFoundError(
+                f"There is no '{container}' container."
+            )
         for identifier, payload in list(self.memory[container].items()):
             if payload.is_expired():
                 expired.append(payload.description())
@@ -227,7 +244,7 @@ class Memory:
         """Instantly deletes the identifier and the data."""
         if not self.memory.get(container, {}).get(identifier):
             raise ObjectNotFoundError(
-                f"""Identifier '{identifier}' does not exist in container 
+                f"""Identifier '{identifier}' does not exist in container
                 '{container}'."""
             )
         del self.memory[container][identifier]
@@ -254,7 +271,9 @@ class Memory:
         This does not return any other payload or memory information.
         """
         if container not in self.memory:
-            raise ObjectNotFoundError("Container does not exist in memory.")
+            raise ObjectNotFoundError(
+                "Container does not exist in memory."
+            )
         self.clean_container(container)
 
         data = []
@@ -312,7 +331,9 @@ class Memory:
     # extension methods, these were not part of the original class but were added for
     # convenience sake.
 
-    def __setitem__(self, container_name: str, container_guide: str = "") -> None:
+    def __setitem__(
+        self, container_name: str, container_guide: str = ""
+    ) -> None:
         """Creates a new container, which is just a plain dictionary inside memory.
 
         Containers are used as seperators of concerns regarding values.
@@ -320,20 +341,27 @@ class Memory:
         """
         if container_name in self.memory:
             raise ObjectAlreadyExistsError(
-                f"Can not create container, {container_name}, because it already exists."
+                f"Can not create container, {container_name}, because it already exists"
             )
         self.memory[container_name] = {}
         self.container_guides[container_name] = container_guide
         return None
 
-    def add_container(self, container_name: str, container_guide: str = "") -> None:
+    def add_container(
+        self, container_name: str, container_guide: str = ""
+    ) -> None:
         self[container_name] = container_guide
         return None
 
     def remove_container(self, container: str) -> None:
-        """Removes a container, seperator of concern, from memory and the guide for that container."""
-        if not container in self.memory:
-            raise ObjectNotFoundError(f"Container {container} does not exist.")
+        """
+        Removes a container, seperator of concern, from memory and the guide for that
+        container.
+        """
+        if container not in self.memory:
+            raise ObjectNotFoundError(
+                f"Container {container} does not exist."
+            )
         del self.memory[container]
         del self.container_guides[container]
         return None

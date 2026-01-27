@@ -3,9 +3,17 @@
 The backend is synchronous and requests will be held until they can be processed by the
 backend.
 
-## Server Design
+## Backend Design And Code Conventions
 
-All input and output have to be in JSON format.
+All input are in JSON format, but outputs may vary if the code isn't 200. All outputs 
+with the code 200 are in JSON format.
+
+In order to make it easy to denote the duties of functions, there are a few conventions
+that are used.
+- The suffix '_handler' means the function is a handler. Nothing significant is executed
+after handlers.
+- The prefix 'server_' means the function will send HTTP_responses in failure cases, 
+although it may have an arguement enabling success cases to also be sent. 
 
 ## The Cache
 The backend uses a custom Memory class for its cache. The Memory class offers basic
@@ -21,58 +29,72 @@ Data Consistencies:
 - Color is stored as an RGB value.
 - Completion is broken into three steps: 'not started', 'in-progress', 'completed'
 
+Potential Considerations For The Future:
+- This curently only allows one session per account. Consider enabling multi-session
+functionality unless explicitly disabled by the user
+- JSON indexing, for the labels
+- Composite indexing
+
 ### Tables / Schema
 
 ```SQL
 CREATE TABLE IF NOT EXISTS accounts (
     -- This should be synced with the clients cookies
-    "session_id" TEXT UNIQUE; 
-    password TEXT NOT NULL;
-    id TEXT PRIMARY KEY;
-    email TEXT NOT NULL UNIQUE;
-    username TEXT NOT NULL UNIQUE;
-    creation_time NUMBER NOT NULL DEFAULT(strftime('%s', 'now'));
-    session_id_creation_time NUMBER;
+    "session_id" TEXT UNIQUE, 
+    password TEXT NOT NULL,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT NOT NULL UNIQUE,
+    username TEXT NOT NULL UNIQUE,
+    creation_time INTEGER NOT NULL DEFAULT(strftime('%s', 'now')),
+    session_id_creation_time INTEGER,
     -- Ranks get translated from strings to numbers by the backend
-    role NUMBER; 
+    role INTEGER CHECK (
+        role BETWEEN 0 AND 8
+    ), 
     -- Stored as a JSON of 'label_name: text-color'
-    labels TEXT; 
+    labels TEXT
 );
 
 
 CREATE TABLE IF NOT EXISTS tasks (
-    id TEXT PRIMARY KEY;
-    "description" TEXT;
-    account_id TEXT NOT NULL;
-    label_name TEXT;
-    completion_status TEXT;
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    "description" TEXT,
+    account_id INTEGER NOT NULL,
+    label_name TEXT,
+    creation_time INTEGER NOT NULL DEFAULT(strftime('%s', 'now')),
+    completion_status TEXT NOT NULL CHECK (
+        completion_status IN ('not started', 'in-progress', 'completed')
+    ),
 
-    FOREIGN KEY(account_id) REFERENCES accounts(id);
+    FOREIGN KEY(account_id) REFERENCES accounts(id) ON DELETE CASCADE
 );
+
 
 CREATE TABLE IF NOT EXISTS deleted_tasks (
-    id TEXT PRIMARY KEY;
-    "description" TEXT;
-    account_id TEXT NOT NULL;
-    label_name TEXT;
-    completion_status TEXT;
-    deletion_time NUMBER NOT NULL DEFAULT(strftime('%s', 'now'));
-);
+    id TEXT PRIMARY KEY,
+    "description" TEXT,
+    account_id TEXT NOT NULL,
+    label_name TEXT,
+    creation_time INTEGER NOT NULL,
+    completion_status TEXT NOT NULL CHECK (
+        completion_status IN ('not started', 'in-progress', 'completed')
+    ),
+    deletion_time INTEGER NOT NULL DEFAULT(strftime('%s', 'now'))
+) WITHOUT ROWID;
 
 
 CREATE TABLE IF NOT EXISTS deleted_accounts (
     -- Account Information
-    session_id TEXT UNIQUE; 
-    account_id TEXT PRIMARY KEY;
-    email TEXT NOT NULL;
-    username TEXT NOT NULL UNIQUE;
-    creation_time NUMBER NOT NULL DEFAULT(strftime('%s', 'now'));
-    session_id_creation_time NUMBER;
-    role NUMBER;
+    id TEXT PRIMARY KEY,
+    email TEXT NOT NULL,
+    username TEXT NOT NULL,
+    creation_time INTEGER NOT NULL,
+    session_id_creation_time INTEGER, -- This is the last login time
+    role INTEGER,
     -- Deletion Information
-    deleted_at NUMBER NOT NULL DEFAULT(strftime('%s', 'now'));
-    labels TEXT;
-);
+    deleted_at INTEGER NOT NULL DEFAULT(strftime('%s', 'now')),
+    labels TEXT
+) WITHOUT ROWID;
 ```
 
 ### Indexes
@@ -83,34 +105,45 @@ ON tasks(account_id);
 
 CREATE INDEX IF NOT EXISTS idx_deleted_tasks_account_id
 ON deleted_tasks(account_id);
+
+CREATE INDEX IF NOT EXISTS idx_tasks_completion_status
+ON tasks(completion_status);
+
+CREATE INDEX IF NOT EXISTS idx_deleted_tasks_completion_status
+ON deleted_tasks(completion_status);
 ```
 
 ### Triggers
 
 ```SQL
-CREATE TRIGGER IF NOT EXISTS deleted_account_tigger (
+CREATE TRIGGER IF NOT EXISTS deleted_account_trigger
 AFTER DELETE ON accounts
 FOR EACH ROW
 BEGIN
     INSERT INTO deleted_accounts (
-        account_id,
+        id,
         username,
         email,
         role,
-        created_at,
+        creation_time,
+        session_id_creation_time,
+        labels,
         deleted_at
     )
     VALUES (
-        OLD.account_id, 
-        OLD.username, 
-        OLD.email, 
-        OLD.role, 
-        OLD.created_at,
-        strftime('%s', 'now')
+        OLD.id,
+        OLD.username,
+        OLD.email,
+        OLD.role,
+        OLD.creation_time,
+        OLD.session_id_creation_time,
+        OLD.labels,
+        strftime('%s','now')
     );
-END);
+END;
 
-CREATE TRIGGER IF NOT EXISTS delete_task_trigger (
+
+CREATE TRIGGER IF NOT EXISTS delete_task_trigger 
 AFTER DELETE ON tasks
 FOR EACH ROW
 BEGIN
@@ -120,6 +153,7 @@ BEGIN
         account_id,
         completion_status,
         label_name,
+        creation_time,
         deletion_time
     )
     VALUES (
@@ -128,18 +162,20 @@ BEGIN
         OLD.account_id,
         OLD.completion_status,
         OLD.label_name,
+        OLD.creation_time,
         strftime('%s', 'now')
     );
-END);
+END;
+
 
 CREATE TRIGGER IF NOT EXISTS session_refresh_time_trigger
-AFTER UPDATE OF session_id ON accounts
+AFTER UPDATE OF "session_id" ON accounts
 FOR EACH ROW
 WHEN OLD.session_id IS NOT NEW.session_id
 BEGIN
-    UPDATE tasks
-    set session_id_creation_time = strftime('%s', 'now')
-    where session_id = NEW.session_id;
+    UPDATE accounts
+    SET session_id_creation_time = strftime('%s', 'now')
+    WHERE id = NEW.id;
 END;
 ```
 
@@ -149,7 +185,9 @@ END;
 PRAGMA foreign_keys = ON;
 PRAGMA temp_store = memory;
 PRAGMA cache_size = 3000;
-PRAGMA page_size = 4096 -- This is the default.
+PRAGMA page_size = 4096; -- This is the default.
+PRAGMA auto_vacuum=FULL;
+PRAGMA journal_mode=WAL;
 ```
 
 ## The Firewall
