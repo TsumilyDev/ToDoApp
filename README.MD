@@ -9,6 +9,7 @@ many additional layers may be layed on top later upon the strong initial foundat
 ```bash
 python app.py
 ```
+http://localhost:8000/app
 
 **Custom Configuration:**
 1. Copy `.env.example` to `.env`:
