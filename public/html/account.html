@@ -4,28 +4,24 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- The first part of the title is consistent across all pages -->
-    <title>Task Manager -- account</title>
+    <title>Login</title>
     <link rel="icon" href="../media/logo.png">
-    <script src="../../src/js/account.js" defer></script>
-    <link rel="stylesheet" href="../../src/css/design-system.css">
-    <link rel="stylesheet" href="../../src/css/main.css">
-    <link rel="stylesheet" href="../../src/css/account.css">
+    <link rel="stylesheet" href="/app.css">
 </head>
 <!--NOTE: Consider splitting this into two files. A sign-up page and a log-in page.
 It's up to you to decide what is better. -->
 <body>
-    <nav>
-
-    </nav>
-    <header>
-        <h1>Accounts page</h1>
+    <header class="page-header">
+        <h1>Login</h1>
     </header>
-    <main>
-
+    <main class="page-main">
+        <form class="login-form" aria-label="Login form">
+            <label class="field-label" for="email">Email</label>
+            <input id="email" name="email" type="email" autocomplete="email" />
+            <label class="field-label" for="password">Password</label>
+            <input id="password" name="password" type="password" autocomplete="current-password" />
+        </form>
     </main>
-    <footer>
-
-    </footer>
 </body>
 
 </html>

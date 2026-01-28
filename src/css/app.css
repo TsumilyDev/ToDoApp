@@ -1,0 +1,64 @@
+:root {
+    color-scheme: light;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    line-height: 1.5;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 24px;
+    background: #ffffff;
+    color: #0f172a;
+}
+
+.page-header {
+    margin-bottom: 24px;
+}
+
+.page-header h1 {
+    margin: 0;
+    font-size: 1.5rem;
+}
+
+.page-main {
+    display: grid;
+    gap: 24px;
+    max-width: 640px;
+}
+
+.field-label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"] {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #cbd5f5;
+    border-radius: 6px;
+    font-size: 1rem;
+}
+
+.task-list-items {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.task-list-items:empty::before {
+    content: "No tasks yet.";
+    color: #64748b;
+    font-size: 0.95rem;
+}
+
+.login-form {
+    display: grid;
+    gap: 12px;
+}
