@@ -3,15 +3,42 @@
 This is a To-Do app created by Tsumily and Spade. It is intended to be basic initially,
 many additional layers may be layed on top later upon the strong initial foundation.
 
-#### Set up
-To begin this server yourself, you have to set a few enviorment variables. The complete
-list is:
-- SQLITE3_PATH *this has to be the relative or absolute path to the SQLITE3 DB.*
-- PORT *this can be any set of integers. Such as 5000*
-- DOMAIN *this can be any domain. Such as 'http://localhost/'
-After doing that, you can run the backend.py file and the server will run flawlessly as
-long as you didn't tamper with anything and the enviorment variables that you entered
-are valid.
+#### Setup
+
+**Quick Start (uses defaults):**
+```bash
+python app.py
+```
+
+**Custom Configuration:**
+1. Copy `.env.example` to `.env`:
+   ```bash
+   cp .env.example .env
+   ```
+
+2. Edit `.env` with your preferred settings (all have sensible defaults)
+
+3. Run the server:
+   ```bash
+   python app.py
+   ```
+   or directly via the backend module:
+   ```bash
+   python -m backend.main
+   ```
+
+**Environment Variables:**
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SQLITE3_PATH` | `./data/todo.db` | Path to SQLite database file. Parent directories are created automatically. |
+| `PORT` | `8000` | Server port number (1-65535) |
+| `BASE_URL` | `localhost` | Server listening address. Use `localhost` for local access only, or `0.0.0.0` for remote access. |
+
+**Notes:**
+- All environment variables have sensible defaults and are optional
+- The database file and parent directories are created automatically if they don't exist
+- Server startup will fail with a clear error if the database directory is not writable
 
 ## Philosophy
 
