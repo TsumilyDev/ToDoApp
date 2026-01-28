@@ -135,9 +135,18 @@ class request_handler(BaseHTTPRequestHandler):
             self.send_http_response(HTTPStatus.METHOD_NOT_ALLOWED)
             return None
         route_path: dict = method_routes.get(self.path)
+        
+        # If exact match not found, check for API route patterns
         if route_path is None:
+            # Check if this is an API route that needs pattern matching
+            if self.path.startswith('/api/tasks'):
+                from backend.api.tasks import api_tasks_handler
+                api_tasks_handler(self)
+                return None
+            
             self.send_http_response(HTTPStatus.NOT_FOUND)
             return None
+        
         # A dict is a resource whereas a tuple is a handler
         # A resource is a file-like structure that requires reading
         if isinstance(route_path, dict):
