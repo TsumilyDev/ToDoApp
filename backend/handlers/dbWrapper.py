@@ -11,12 +11,28 @@ from http import HTTPStatus
 from dotenv import load_dotenv
 from os import environ
 from os.path import dirname
+import os
+from pathlib import Path
 
 load_dotenv(dirname(__file__) + r"\..\..\.env")
 logger = logging.getLogger(__name__)
 
-SQLITE3_PATH = environ["SQLITE3_PATH"]
-db = connect(SQLITE3_PATH)
+# Get database path from environment with default fallback
+SQLITE3_PATH = environ.get("SQLITE3_PATH", "./data/todo.db")
+
+# Validate database path and ensure directory exists
+try:
+    db_path = Path(SQLITE3_PATH).resolve()
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+    
+    if not os.access(db_path.parent, os.W_OK):
+        raise RuntimeError(f"No write permission for database directory: {db_path.parent}")
+    
+    db = connect(str(db_path))
+except Exception as e:
+    logger.error(f"Failed to initialize database at {SQLITE3_PATH}: {e}")
+    raise
+
 db.row_factory = Row
 cursor = db.cursor()
 
