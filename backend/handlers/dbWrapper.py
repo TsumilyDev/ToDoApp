@@ -36,6 +36,28 @@ except Exception as e:
 db.row_factory = Row
 cursor = db.cursor()
 
+
+def init_accounts_table() -> None:
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS accounts (
+            session_id TEXT UNIQUE,
+            password TEXT NOT NULL,
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT NOT NULL UNIQUE,
+            username TEXT NOT NULL UNIQUE,
+            creation_time INTEGER NOT NULL DEFAULT(strftime('%s', 'now')),
+            session_id_creation_time INTEGER,
+            role INTEGER NOT NULL DEFAULT 1,
+            labels TEXT
+        )
+        """
+    )
+    db.commit()
+
+
+init_accounts_table()
+
 # UPDATE: ADD BUFFERING FOR DB TRANSACTIONS (backendMemory["DBBuffer"], executemany())
 # UPDATE: ADD LOGGING FOR DB TRANSACTIONS (logger) -- also configure it
 
@@ -93,7 +115,7 @@ def update_cells(
             f"AND {second_search_column} = {second_search_value}"
         )
     try:
-        for i in value:
+        for i in range(len(value)):
             cursor.execute(
                 f"UPDATE {table} SET {column[i]} = ? WHERE {search_column[i]} = ?"
                 f"{execution_append}",
@@ -159,7 +181,7 @@ def update_cell(
 
 
 def insert_row(
-    table: str, columns: tuple[str], values: tuple[str]
+    table: str, columns: tuple[str], values: tuple[Any, ...]
 ) -> Cursor:
     """Wrapper for adding rows
 
@@ -167,7 +189,14 @@ def insert_row(
     valid information. This will log errors then propogate them.
     """
     try:
-        cursor.execute(f"INSERT INTO {table} {columns} VALUES {values}")
+        if len(columns) != len(values):
+            raise ValueError("Column/value length mismatch")
+        column_list = ", ".join(columns)
+        placeholders = ", ".join("?" for _ in values)
+        cursor.execute(
+            f"INSERT INTO {table} ({column_list}) VALUES ({placeholders})",
+            values,
+        )
         db.commit()
         return cursor
     except SqlErr as err:

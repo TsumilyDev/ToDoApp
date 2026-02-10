@@ -4,20 +4,30 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- The first part of the title is consistent across all pages -->
-    <title>Task Manager</title>
+    <title>Task Console</title>
     <link rel="icon" href="../media/logo.png">
-    <script src="../../src/js/app.js" defer></script>
-    <link rel="stylesheet" href="../../src/css/design-system.css">
-    <link rel="stylesheet" href="../../src/css/main.css">
-    <link rel="stylesheet" href="../../src/css/app.css">
+    <script src="/app.js" defer></script>
+    <link rel="stylesheet" href="/app.css">
 </head>
 <body>
-    <nav class="app-nav">
-        <a href="#/projects">Projects</a>
-        <a href="#/info">Info</a>
-    </nav>
-    <main id="app-view">
-        <!-- Route content loads here -->
+    <header class="page-header">
+        <h1>Task Console</h1>
+        <button id="logout-button" class="logout-button" type="button">Logout</button>
+    </header>
+    <main class="page-main">
+        <section class="task-console" aria-label="Task input">
+            <label class="field-label" for="task-input">New task</label>
+            <input
+                id="task-input"
+                name="task-input"
+                type="text"
+                placeholder="Type a task and press Enter"
+                autocomplete="off"
+            />
+        </section>
+        <section class="task-list" aria-label="Task list">
+            <ul id="task-list" class="task-list-items" aria-live="polite"></ul>
+        </section>
     </main>
 </body>
 

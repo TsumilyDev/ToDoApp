@@ -158,12 +158,13 @@ def post_session_handler(self: request_handler) -> None:
 
 
 def delete_account_handler(self: request_handler) -> None:
+    session_id = self.cookies["session_id"]
     self.remove_cookie("session_id")
     server_interact_with_row(
         self,
         "accounts",
         "session_id",
-        self.cookies["session_id"],
+        session_id,
         "delete",
         strict=True,
         send_response_on_success=True,
@@ -236,20 +237,21 @@ def patch_account_handler(self: request_handler) -> None:
 
 def get_session_handler(self: request_handler) -> None:
     (
-        self.send_http_response(HTTPStatus.UNAUTHORIZED)
+        self.send_http_response(HTTPStatus.OK)
         if self.is_logged_in
-        else self.send_http_response(HTTPStatus.OK)
+        else self.send_http_response(HTTPStatus.UNAUTHORIZED)
     )
     return None
 
 
 def delete_session_handler(self: request_handler) -> None:
+    session_id = self.cookies["session_id"]
     self.remove_cookie("session_id")
     server_update_cells(
         self,
         "accounts",
         ["session_id"],
-        [self.cookies["session_id"]],
+        [session_id],
         ["session_id"],
         [None],
         strict=True,

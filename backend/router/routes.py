@@ -48,6 +48,7 @@ routes = {
             "path": "public/html/app.html",
             "type": "text/html",
             "bytes": False,
+            "min_role": ROLES["account"],
         },
         "/about": {
             "path": "public/html/about.html",

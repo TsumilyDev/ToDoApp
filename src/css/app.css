@@ -1,0 +1,147 @@
+:root {
+    color-scheme: light;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    line-height: 1.5;
+    --spacing-sm: 8px;
+    --spacing-md: 12px;
+    --spacing-lg: 24px;
+    --color-text: #0f172a;
+    --color-text-muted: #64748b;
+    --color-border: #cbd5f5;
+    --color-bg-hover: #f8fafc;
+    --color-bg-completed: rgba(0, 0, 0, 0.05);
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 24px;
+    background: #ffffff;
+    color: var(--color-text);
+}
+
+.page-header {
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-md);
+}
+
+.page-header h1 {
+    margin: 0;
+    font-size: 1.5rem;
+}
+
+.logout-button {
+    padding: 8px 14px;
+    background: #111827;
+    color: #ffffff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.page-main {
+    display: grid;
+    gap: 24px;
+    max-width: 640px;
+}
+
+.field-label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"] {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    font-size: 1rem;
+}
+
+/* ========================================
+   TASK LIST
+   ======================================== */
+
+.task-list-items {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 8px;
+}
+
+.task-item {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: var(--spacing-md);
+    align-items: center;
+    padding: var(--spacing-md);
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    background: #ffffff;
+    transition: background-color 150ms;
+}
+
+.task-item:hover {
+    background-color: var(--color-bg-hover);
+}
+
+.task-checkbox {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    accent-color: #002fff;
+}
+
+.task-label {
+    cursor: pointer;
+    user-select: none;
+    word-break: break-word;
+}
+
+.task-delete {
+    padding: 6px 12px;
+    background: #ff4444;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: background-color 150ms;
+}
+
+.task-delete:hover {
+    background-color: #dd0000;
+}
+
+.task-completed {
+    opacity: 0.6;
+    background-color: var(--color-bg-completed);
+}
+
+.task-completed .task-label {
+    text-decoration: line-through;
+    color: var(--color-text-muted);
+}
+
+.task-empty {
+    padding: var(--spacing-md);
+    text-align: center;
+    color: var(--color-text-muted);
+    font-style: italic;
+    list-style: none;
+}
+
+.login-form {
+    display: grid;
+    gap: 12px;
+}

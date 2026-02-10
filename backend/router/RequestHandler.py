@@ -129,15 +129,31 @@ class request_handler(BaseHTTPRequestHandler):
             self.wfile.write(body)
         return None
 
+    def redirect(self, location: str, status: HTTPStatus = HTTPStatus.FOUND) -> None:
+        self.response_headers["Location"] = location
+        self.send_http_response(status, "Redirecting")
+        return None
+
     def route(self) -> None:
         method_routes: dict = routes.get(self.command)
         if method_routes is None:
             self.send_http_response(HTTPStatus.METHOD_NOT_ALLOWED)
             return None
         route_path: dict = method_routes.get(self.path)
+        
+        # If exact match not found, check for API route patterns
         if route_path is None:
+            # Check if this is an API route that needs pattern matching
+            if self.path.startswith('/api/tasks'):
+                from backend.api.tasks import api_tasks_handler
+                if not authenticate_request(self):
+                    return None
+                api_tasks_handler(self)
+                return None
+            
             self.send_http_response(HTTPStatus.NOT_FOUND)
             return None
+        
         # A dict is a resource whereas a tuple is a handler
         # A resource is a file-like structure that requires reading
         if isinstance(route_path, dict):
@@ -156,7 +172,16 @@ class request_handler(BaseHTTPRequestHandler):
         if min_role > ROLES["public"]:
             authenticate_request(self)
             if self.user_information["role"] < min_role:
+                if self.path == "/app":
+                    self.redirect("/account")
+                    return None
                 self.send_error(HTTPStatus.UNAUTHORIZED)
+                return None
+
+        if self.path == "/account":
+            authenticate_request(self)
+            if self.is_logged_in:
+                self.redirect("/app")
                 return None
 
         if route_path_type == "handler":
@@ -207,16 +232,15 @@ class request_handler(BaseHTTPRequestHandler):
         SameSite="Strict",
     ) -> None:
         self.response_headers["Set-Cookie"] = (
-            f"""{key}={value}; SameSite={SameSite};
-            HttpOnly; Max-Age={Max_Age}; Path=/""",
+            f"{key}={value}; SameSite={SameSite}; HttpOnly; "
+            f"Max-Age={Max_Age}; Path=/"
         )
         self.cookies[key] = value
         return None
 
     def remove_cookie(self, key: str) -> None:
         self.response_headers["Set-Cookie"] = (
-            f"""{key}=; SameSite=Strict;
-            HttpOnly; Max-Age=0; Path=/""",
+            f"{key}=; SameSite=Strict; HttpOnly; Max-Age=0; Path=/"
         )
         del self.cookies[key]
         return None
