@@ -4,23 +4,41 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- The first part of the title is consistent across all pages -->
-    <title>Login</title>
+    <title>Account</title>
     <link rel="icon" href="../media/logo.png">
-    <link rel="stylesheet" href="/app.css">
+    <script src="/account.js" defer></script>
+    <link rel="stylesheet" href="/account.css">
 </head>
 <!--NOTE: Consider splitting this into two files. A sign-up page and a log-in page.
 It's up to you to decide what is better. -->
 <body>
     <header class="page-header">
-        <h1>Login</h1>
+        <h1>Account</h1>
     </header>
     <main class="page-main">
-        <form class="login-form" aria-label="Login form">
-            <label class="field-label" for="email">Email</label>
-            <input id="email" name="email" type="email" autocomplete="email" />
-            <label class="field-label" for="password">Password</label>
-            <input id="password" name="password" type="password" autocomplete="current-password" />
-        </form>
+        <section class="auth-card" aria-label="Sign up">
+            <h2>Sign up</h2>
+            <form id="signup-form" class="auth-form">
+                <label class="field-label" for="signup-email">Email</label>
+                <input id="signup-email" name="email" type="email" autocomplete="email" required />
+                <label class="field-label" for="signup-password">Password</label>
+                <input id="signup-password" name="password" type="password" autocomplete="new-password" required />
+                <button type="submit">Sign up</button>
+            </form>
+        </section>
+
+        <section class="auth-card" aria-label="Login">
+            <h2>Login</h2>
+            <form id="login-form" class="auth-form">
+                <label class="field-label" for="login-email">Email</label>
+                <input id="login-email" name="email" type="email" autocomplete="email" required />
+                <label class="field-label" for="login-password">Password</label>
+                <input id="login-password" name="password" type="password" autocomplete="current-password" required />
+                <button type="submit">Login</button>
+            </form>
+        </section>
+
+        <p id="auth-message" class="auth-message" role="alert" aria-live="polite"></p>
     </main>
 </body>
 

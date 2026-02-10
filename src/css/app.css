@@ -25,11 +25,24 @@ body {
 
 .page-header {
     margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-md);
 }
 
 .page-header h1 {
     margin: 0;
     font-size: 1.5rem;
+}
+
+.logout-button {
+    padding: 8px 14px;
+    background: #111827;
+    color: #ffffff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
 }
 
 .page-main {

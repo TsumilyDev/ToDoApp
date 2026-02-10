@@ -1,0 +1,4 @@
+bcrypt
+email-validator
+python-dotenv
+valid8r

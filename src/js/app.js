@@ -2,14 +2,7 @@
 // STATE
 // ========================================
 
-let tasks = [
-    { id: 1, title: "Review project proposal", completed: false },
-    { id: 2, title: "Finish quarterly report", completed: true },
-    { id: 3, title: "Update documentation", completed: false },
-];
-
-let nextId = 4;
-let filterQuery = "";
+let tasks = [];
 
 // ========================================
 // RENDER
@@ -19,14 +12,9 @@ function renderTasks() {
     const taskList = document.querySelector("#task-list");
     taskList.innerHTML = "";
 
-    // Filter tasks by input
-    const filtered = tasks.filter((task) =>
-        task.title.toLowerCase().includes(filterQuery.toLowerCase())
-    );
-
     // Separate incomplete and completed
-    const incomplete = filtered.filter((t) => !t.completed);
-    const completed = filtered.filter((t) => t.completed);
+    const incomplete = tasks.filter((t) => !t.completed);
+    const completed = tasks.filter((t) => t.completed);
 
     // Render incomplete tasks
     if (incomplete.length > 0) {
@@ -45,10 +33,10 @@ function renderTasks() {
     }
 
     // Empty state
-    if (filtered.length === 0) {
+    if (tasks.length === 0) {
         const empty = document.createElement("li");
         empty.className = "task-empty";
-        empty.textContent = "No tasks match your search.";
+        empty.textContent = "No tasks yet.";
         taskList.appendChild(empty);
     }
 }
@@ -84,34 +72,87 @@ function createTaskElement(task) {
 // STATE MUTATIONS
 // ========================================
 
-function addTask(title) {
-    if (!title.trim()) return;
-
-    tasks.push({
-        id: nextId++,
-        title: title.trim(),
-        completed: false,
+async function loadTasks() {
+    const response = await fetch("/api/tasks", {
+        method: "GET",
+        credentials: "same-origin",
     });
 
-    renderTasks();
-}
-
-function deleteTask(id) {
-    tasks = tasks.filter((t) => t.id !== id);
-    renderTasks();
-}
-
-function toggleTask(id) {
-    const task = tasks.find((t) => t.id === id);
-    if (task) {
-        task.completed = !task.completed;
-        renderTasks();
+    if (response.status === 401) {
+        window.location.href = "/account";
+        return;
     }
+
+    if (!response.ok) {
+        return;
+    }
+
+    const data = await response.json();
+    tasks = Array.isArray(data.tasks) ? data.tasks : [];
+    renderTasks();
 }
 
-function setFilter(query) {
-    filterQuery = query;
-    renderTasks();
+async function addTask(title) {
+    if (!title.trim()) return;
+
+    const response = await fetch("/api/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ title: title.trim(), labels: [] }),
+    });
+
+    if (response.status === 401) {
+        window.location.href = "/account";
+        return;
+    }
+
+    if (!response.ok) {
+        return;
+    }
+
+    await loadTasks();
+}
+
+async function deleteTask(id) {
+    const response = await fetch(`/api/tasks/${id}`, {
+        method: "DELETE",
+        credentials: "same-origin",
+    });
+
+    if (response.status === 401) {
+        window.location.href = "/account";
+        return;
+    }
+
+    if (!response.ok) {
+        return;
+    }
+
+    await loadTasks();
+}
+
+async function toggleTask(id) {
+    const task = tasks.find((t) => t.id === id);
+    if (!task) return;
+
+    const response = await fetch(`/api/tasks/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ completed: !task.completed }),
+    });
+
+    if (response.status === 401) {
+        window.location.href = "/account";
+        return;
+    }
+
+    if (!response.ok) {
+        return;
+    }
+
+    await loadTasks();
 }
 
 // ========================================
@@ -121,17 +162,14 @@ function setFilter(query) {
 document.addEventListener("DOMContentLoaded", () => {
     const input = document.querySelector("#task-input");
     const taskList = document.querySelector("#task-list");
+    const logoutButton = document.querySelector("#logout-button");
 
     if (!input || !taskList) {
         return;
     }
 
     input.focus();
-    renderTasks();
-
-    input.addEventListener("input", (event) => {
-        setFilter(event.target.value);
-    });
+    loadTasks();
 
     input.addEventListener("keydown", (event) => {
         if (event.key !== "Enter") {
@@ -141,7 +179,16 @@ document.addEventListener("DOMContentLoaded", () => {
         event.preventDefault();
         addTask(input.value);
         input.value = "";
-        setFilter("");
         input.focus();
     });
+
+    if (logoutButton) {
+        logoutButton.addEventListener("click", async () => {
+            await fetch("/session/delete", {
+                method: "DELETE",
+                credentials: "same-origin",
+            });
+            window.location.href = "/account";
+        });
+    }
 });

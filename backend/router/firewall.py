@@ -3,6 +3,7 @@ import logging
 from backend.handlers.dbWrapper import server_interact_with_row
 from backend.memory import ObjectNotFoundError, DataExpiredError, Memory
 from secrets import token_urlsafe
+from time import time
 from http import HTTPStatus
 from http.cookies import BaseCookie, _unquote, _quote
 import json
@@ -92,14 +93,28 @@ def _increment_rate_limit(
         requests_amount = backendMemory.retrieve_data(
             container, request_identifier
         )
+        payload = backendMemory.memory[container].get(request_identifier)
         if requests_amount >= cap:
+            remaining = 0
+            if payload is not None:
+                remaining = max(
+                    0, int(payload.expiration_time - time())
+                )
             self.send_error(
                 HTTPStatus.TOO_MANY_REQUESTS,
-                f"""Try again in
-                {backendMemory[container][request_identifier].ttl} seconds.""",
+                f"Try again in {remaining} seconds.",
             )
             return False
-        backendMemory[container][request_identifier] += 1
+        if payload is not None:
+            payload.data = requests_amount + 1
+        else:
+            backendMemory.add_data(
+                container,
+                request_identifier,
+                RATE_LIMITING_INTERVAL,
+                requests_amount + 1,
+                overwrite=True,
+            )
         return True
     except (ObjectNotFoundError, DataExpiredError):
         backendMemory.add_data(
@@ -210,10 +225,13 @@ def authenticate_request(self: request_handler) -> bool:
     )
 
     if cursor is None:
-        self.send_error(HTTPStatus.INTERNAL_SERVER_ERROR)
         return False
 
-    user_information = cursor.fetchone()
+    if isinstance(cursor, list):
+        user_information = cursor[0] if cursor else None
+    else:
+        user_information = cursor
+
     if user_information is None:
         self.remove_cookie("session_id")
         return True
