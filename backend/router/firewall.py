@@ -210,7 +210,6 @@ def authenticate_request(self: request_handler) -> bool:
 
     Also sets self.is_logged_in.
     """
-    self.user_information = {"role": ROLES["public"]}
     self.is_logged_in = False
 
     if self.cookies["session_id"] is None:

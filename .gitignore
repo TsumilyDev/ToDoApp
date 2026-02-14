@@ -2,3 +2,5 @@
 .database
 __pycache__/
 *.pyc
+.vscode
+.dev

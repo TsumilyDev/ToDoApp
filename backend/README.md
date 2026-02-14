@@ -48,7 +48,7 @@ CREATE TABLE IF NOT EXISTS accounts (
     creation_time INTEGER NOT NULL DEFAULT(strftime('%s', 'now')),
     session_id_creation_time INTEGER,
     -- Ranks get translated from strings to numbers by the backend
-    role INTEGER CHECK (
+    role NOT NULL INTEGER CHECK (
         role BETWEEN 0 AND 8
     ), 
     -- Stored as a JSON of 'label_name: text-color'
@@ -90,7 +90,7 @@ CREATE TABLE IF NOT EXISTS deleted_accounts (
     username TEXT NOT NULL,
     creation_time INTEGER NOT NULL,
     session_id_creation_time INTEGER, -- This is the last login time
-    role INTEGER,
+    role NOT NULL INTEGER,
     -- Deletion Information
     deleted_at INTEGER NOT NULL DEFAULT(strftime('%s', 'now')),
     labels TEXT

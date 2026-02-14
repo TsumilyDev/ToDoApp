@@ -34,7 +34,9 @@ class request_handler(BaseHTTPRequestHandler):
             self.send_error(HTTPStatus.SERVICE_UNAVAILABLE)
             return None
         self.close_connection = True
-        self.response_headers = {}
+        self.response_headers = {} 
+        self.user_information = {"role": ROLES["public"]}
+
         try:
             # No route in server should be longer than 399 characters
             self.raw_requestline = self.rfile.readline(400)
@@ -171,11 +173,16 @@ class request_handler(BaseHTTPRequestHandler):
 
         if min_role > ROLES["public"]:
             authenticate_request(self)
-            if self.user_information["role"] < min_role:
-                if self.path == "/app":
-                    self.redirect("/account")
+            try:
+                if self.user_information["role"] < min_role:
+                    if self.path == "/app":
+                        self.redirect("/account")
+                        return None
+                    self.send_error(HTTPStatus.UNAUTHORIZED)
                     return None
-                self.send_error(HTTPStatus.UNAUTHORIZED)
+            except TypeError:
+                self.send_error(HTTPStatus.INTERNAL_SERVER_ERROR)
+                logger.error("TypeError occured, likely due to user role being None.", exc_info=True)
                 return None
 
         if self.path == "/account":

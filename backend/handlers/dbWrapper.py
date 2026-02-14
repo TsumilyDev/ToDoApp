@@ -172,6 +172,9 @@ def update_cell(
             )
         db.commit()
         return None
+    except SqlIntegrityErr:
+        db.rollback()
+        raise err
     except SqlErr as err:
         db.rollback()
         logger.error(
@@ -199,6 +202,9 @@ def insert_row(
         )
         db.commit()
         return cursor
+    except SqlIntegrityErr:
+        db.rollback()
+        raise err
     except SqlErr as err:
         db.rollback()
         logger.error(

@@ -18,6 +18,7 @@ from http import HTTPStatus
 from typing import TYPE_CHECKING
 from valid8r import from_type, Maybe
 import string
+from backend.router.firewall import ROLES 
 
 if TYPE_CHECKING:
     from backend.router.RequestHandler import request_handler
@@ -104,8 +105,8 @@ def post_account_handler(self: request_handler) -> None:
     server_insert_row(
         self,
         "accounts",
-        ("email", "password", "username"),
-        (user_email, user_password, username),
+        ("email", "password", "username", "role"),
+        (user_email, user_password, username, ROLES["account"]),
         user_err_msg="Username Or Email Is Already In Use",
         send_response_on_success=True,
         strict=True,

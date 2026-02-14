@@ -31,6 +31,14 @@ def get_task_handler(self) -> None:
     ...
 
 
+def get_user_tasks_handler(self) -> None:
+    """
+    Responds with all the user-allowed information about that task stored in the
+    database.
+    """
+    ...
+
+
 # Task Label Handlers
 
 

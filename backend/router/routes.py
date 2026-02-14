@@ -55,6 +55,16 @@ routes = {
             "type": "text/html",
             "bytes": False,
         },
+        "/": {
+            "path": "public/html/about.html",
+            "type": "text/html",
+            "bytes": False,
+        },
+        "": {
+            "path": "public/html/about.html",
+            "type": "text/html",
+            "bytes": False,
+        },
         "/account": {
             "path": "public/html/account.html",
             "type": "text/html",
@@ -96,6 +106,7 @@ routes = {
             "bytes": True,
         },
         "/task/information": (get_task_handler, ROLES["account"]),
+        "/tasks": (get_user_tasks_handler, ROLES["account"]),
         "/task-label/information": (
             get_task_label_handler,
             ROLES["account"],

@@ -34,7 +34,7 @@ async function login(email, password) {
 
     if (!response.ok) {
         const errorText = await response.text();
-        showMessage(errorText || "Try again Dummy");
+        showMessage(errorText || "Invalid information, try again.");
         return;
     }
 
@@ -50,7 +50,7 @@ if (signupForm) {
         const password = document.querySelector("#signup-password")?.value.trim();
 
         if (!email || !password) {
-            showMessage("Try again Dummy");
+            showMessage("Invalid information, try again.");
             return;
         }
 
@@ -67,13 +67,13 @@ if (signupForm) {
 
             if (!response.ok) {
                 const errorText = await response.text();
-                showMessage(errorText || "Try again Dummy");
+                showMessage(errorText || "Invalid information, try again.");
                 return;
             }
 
             await login(email, password);
         } catch (error) {
-            showMessage("Try again Dummy");
+            showMessage("Technical difficultes occured, try again later.");
         } finally {
             setFormBusy(signupForm, false);
         }
@@ -89,7 +89,7 @@ if (loginForm) {
         const password = document.querySelector("#login-password")?.value.trim();
 
         if (!email || !password) {
-            showMessage("Try again Dummy");
+            showMessage("Invalid information, try again.");
             return;
         }
 
@@ -98,7 +98,7 @@ if (loginForm) {
         try {
             await login(email, password);
         } catch (error) {
-            showMessage("Try again Dummy");
+            showMessage("Invalid information, try again.");
         } finally {
             setFormBusy(loginForm, false);
         }
